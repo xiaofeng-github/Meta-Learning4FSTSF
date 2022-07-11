@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 __author__ = 'XF'
-
+__date__ = '2022-07-11'
 '''
 The script is set for supplying some tool function.
 '''
@@ -65,9 +65,12 @@ def generate_filename(suffix, *args, sep='_', timestamp=False):
 
 
 def metrics(y, y_hat):
+    
     assert y.shape == y_hat.shape  # Tensor y and Tensor y_hat must have the same shape
     y = y.cpu()
     y_hat = y_hat.cpu()
+    # mape
+    _mape = mape(y, y_hat)
 
     # smape
     _smape = smape(y, y_hat)
@@ -75,11 +78,18 @@ def metrics(y, y_hat):
     # rmse
     _rmse = rmse(y, y_hat)
 
-    return _rmse, _smape
+    return _rmse, _mape, _smape
+
+
+def mape(Y, Y_hat):
+
+    temp = [abs((y - y_hat) / y) for y, y_hat in zip(Y.view(-1).numpy(), Y_hat.view(-1).numpy())]
+    return (sum(temp) / len(temp)) * 100
 
 
 def smape(Y, Y_hat):
-    temp = [abs(y - y_hat) / (abs(y) + abs(y_hat)) for y, y_hat in zip(Y.view(-1).numpy(), Y_hat.view(-1).numpy())]
+
+    temp = [abs(y- y_hat) / (abs(y) + abs(y_hat)) for y, y_hat in zip(Y.view(-1).numpy(), Y_hat.view(-1).numpy())]
     return (sum(temp) / len(temp)) * 200
 
 
@@ -87,3 +97,7 @@ def rmse(Y, Y_hat):
 
     temp = [pow(y - y_hat, 2) for y, y_hat in zip(Y.view(-1).numpy(), Y_hat.view(-1).numpy())]
     return pow(sum(temp) / len(temp), 0.5)
+
+
+if __name__ == '__main__':
+    pass

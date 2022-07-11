@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 __author__ = 'XF'
-__date__ = '2021-05-05'
+__date__ = '2022-07-11'
 '''
 This script is set to finish time series data embedding for uniting the length of data.
 '''
@@ -16,8 +16,8 @@ import torch.nn as nn
 
 # self-defined wheels
 from data_preprocessing import normalizer
-from tools import obj_serialization, obj_unserialization
-from configs import DATADIR
+from tools.tools import obj_serialization, obj_unserialization
+from configs import DATA_DIR as DATADIR
 
 class EmbeddingBiGRU(nn.Module):
 

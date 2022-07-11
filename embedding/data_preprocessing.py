@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 __author__ = 'XF'
+__date__ = '2022-07-11'
 
 '''
 the scripts for time series data processing.
@@ -9,10 +10,10 @@ import os
 import os.path as osp
 import torch
 import numpy as np
-import pandas as pds
 from collections import OrderedDict
-from configs import DATADIR, few_shot_dataset_name
-from tools import obj_serialization, read_tsv, obj_unserialization, generate_filename
+from configs import DATA_DIR as DATADIR
+from configs import few_shot_dataset_name
+from tools.tools import obj_serialization, read_tsv, obj_unserialization, generate_filename
 from sklearn import preprocessing
 
 
@@ -26,10 +27,10 @@ def few_shot_data(path=None):
     process_traindata_num = 0
     process_testdata_num = 0
     for dir in dataset_file_names:
-        dataset_dir = os.path.join(path, dir)
+        dataset_dir = osp.join(path, dir)
         if os.path.isdir(dataset_dir):
-            train_file_path = os.path.join(dataset_dir, '%s_TRAIN.tsv' % dir)
-            test_file_path = os.path.join(dataset_dir, '%s_TEST.tsv' % dir)
+            train_file_path = osp.join(dataset_dir, '%s_TRAIN.tsv' % dir)
+            test_file_path = osp.join(dataset_dir, '%s_TEST.tsv' % dir)
             if os.path.isfile(train_file_path):
                 train_dataset.setdefault(dir, read_tsv(train_file_path).loc[:, 1:].values.astype(np.float64))
                 process_traindata_num += 1
@@ -41,8 +42,8 @@ def few_shot_data(path=None):
             else:
                 print('"%s" is not a file!' % test_file_path)
 
-    obj_serialization(os.path.join(DATADIR, 'train_data.pkl'), train_dataset)
-    obj_serialization(os.path.join(DATADIR, 'test_data.pkl'), test_dataset)
+    obj_serialization(osp.join(DATADIR, 'train_data.pkl'), train_dataset)
+    obj_serialization(osp.join(DATADIR, 'test_data.pkl'), test_dataset)
     print('train_process_num: %d' % process_traindata_num)
     print('test_process_num: %d' % process_testdata_num)
 
@@ -87,21 +88,21 @@ def construct_dataset(size=100):
     data_dict = {}
     file_num = len(file_list)
     for file in file_list:
-        data_path = os.path.join(DATADIR, file)
-        if os.path.isdir(os.path.join(DATADIR, file)):
+        data_path = osp.join(DATADIR, file)
+        if os.path.isdir(osp.join(DATADIR, file)):
             file_num -= 1
             continue
         data_dict.setdefault(file.split('.')[0], obj_unserialization(data_path))
         counter += 1
         if counter % size == 0:
-            save_path = os.path.join(DATADIR,
+            save_path = osp.join(DATADIR,
                                      'dataset\\%s' % generate_filename('.pkl', *['UCR', str(counter - size + 1), str(counter)])
                                      )
             obj_serialization(save_path, data_dict)
             print(save_path)
             data_dict.clear()
         elif counter == file_num:
-            save_path = os.path.join(DATADIR,
+            save_path = osp.join(DATADIR,
                                      'dataset\\%s' % generate_filename('.pkl', *['UCR', str(size * (counter // size) + 1), str(counter)])
                                      )
             obj_serialization(save_path, data_dict)
@@ -133,8 +134,8 @@ def get_basic_data():
     few_shot_train_data = OrderedDict()
     few_shot_test_data = OrderedDict()
     for key, value in load_data.items():
-        if key in DIRTY_DATA_ID:
-            continue
+        # if key in DIRTY_DATA_ID:
+        #     continue
         train_data, test_data = split_data(data=value, ratio=0.5)
         few_shot_train_data.setdefault(key, np.array(train_data))
         few_shot_test_data.setdefault(key, np.array(test_data))

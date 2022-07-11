@@ -1,13 +1,18 @@
 # -*- coding:utf-8 -*-
 __author__ = 'XF'
+__date__ = '2022/03/10'
 
 'options'
+
+# built-in library
 import os
 import os.path as osp
 import argparse
 from builtins import print as b_print
-from configs import model_save_dir, loss_save_dir, log_save_path, MODEL_NAME, MODE_NAME, exp_result_dir
-from tools import generate_filename
+
+# self-defined library
+from configs import model_save_dir, loss_save_dir, log_save_path, log_save_dir, MODEL_NAME, MODE_NAME, exp_result_dir
+from tools.tools import generate_filename
 
 
 def task_id_int2str(int_id):
@@ -34,16 +39,16 @@ def print(*args, file='./log.txt', end='\n', terminate=True):
 
 def parse_args(script='main'):
 
-    parser = argparse.ArgumentParser(description='Load Forecasting script %s.py' % script)
+    parser = argparse.ArgumentParser(description='Time Seriess Forecasting script %s.py' % script)
 
     # training arguments
     parser.add_argument('--model', default=None,
-                        help='the model name is used to train.[lstm, cnn, cnn->lstm, lstm+maml, cnn+maml, cnnConlstm+maml]')
-    parser.add_argument('--epoch', type=int, default=10, help='the iteration number for training data.')
+                        help='the model name is used to train.[mlp, lstm, cnn, cnnConlstm, lstm+maml, cnn+maml, cnnConlstm+maml]')
+    parser.add_argument('--epoch', type=int, default=1, help='the iteration number for training data.')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate.')
 
     # data arguments
-    parser.add_argument('--dataSet', default='few_shot_data', help='the data path for training and testing.')
+    parser.add_argument('--dataset', default='few_shot_data', help='the data path for training and testing.')
     parser.add_argument('--ratio', type=float, default=0.8, help='the ratio of training set for all data set')
     parser.add_argument('--trainSet', default='', help='the path of the training data.')
     parser.add_argument('--testSet', default='', help='the path of the testing data.')
@@ -56,6 +61,7 @@ def parse_args(script='main'):
     parser.add_argument('--log', default=log_save_path, help='the log save path.')
     parser.add_argument('--maml_log', default=log_save_path, help='the log save path.')
     parser.add_argument('--rmse_path', default=log_save_path, help='the log save metric rmse.')
+    parser.add_argument('--mape_path', default=log_save_path, help='the log save metric mape.')
     parser.add_argument('--smape_path', default=log_save_path, help='the log save metric smape.')
     # the arguments for LSTM model
     parser.add_argument('--time_size', type=int, default=1, help='the time_size for lstm input')
@@ -71,7 +77,7 @@ def parse_args(script='main'):
     parser.add_argument('--model_state', default='', help='the path of trained model')
 
     # for maml
-    parser.add_argument('--user_id', type=str, default='0', help='the id of true target task')
+    parser.add_argument('--user_id', type=str, default='none', help='the id of true target task')
     parser.add_argument('--update_step', type=int, default=5, help='the train task update step')
     parser.add_argument('--update_step_test', type=int, default=50, help='the target task update step')
     parser.add_argument('--meta_lr', type=float, default=1e-4, help='the learning rate of meta network')
@@ -86,32 +92,43 @@ def parse_args(script='main'):
     # for hardware setting
     parser.add_argument('--device', default='cuda', help='the calculate device for torch Tensor, [cpu, cuda] can be chosen')
 
+    # for new settings
+    parser.add_argument('--new_settings', action='store_true', default=False, help='training scheme in new settings.')
+    parser.add_argument('--ft_step', type=int, default=100, help='epoch number of fine-tuning in new settings')
+
     params = parser.parse_args()
 
     # maml log
     if params.maml:
-        maml_log_path = osp.join('./maml_log', generate_filename('.txt', *['log'], timestamp=True))
+        maml_log_path = osp.join(log_save_dir, generate_filename('.txt', *['log'], timestamp=True))
         params.maml_log = maml_log_path
         params.log = maml_log_path
         params_show(params)
 
-    # dynamic generate log file
+    # 动态生成日志文件
     log_path = osp.join('./log', generate_filename('.txt', *['log'], timestamp=True))
     params.log = log_path
     params_show(params)
 
-    # generate experimental result log file
-    result_dir_name = params.model + '_' + str(params.ppn)
+    # 生成实验结果日志
+    if params.new_settings:
+        result_dir_name = params.baseNet + '_' + str(params.ppn) + 'new_settings'
+    else:
+        result_dir_name = params.baseNet + '_' + str(params.ppn)
+    if params.maml:
+        result_dir_name = 'M_' + result_dir_name
+
     result_dir = osp.join(exp_result_dir, result_dir_name)
     if not osp.exists(result_dir):
         os.mkdir(result_dir)
     params.rmse_path = osp.join(result_dir, generate_filename('.txt', *['rmse'], timestamp=True))
+    params.mape_path = osp.join(result_dir, generate_filename('.txt', *['mape'], timestamp=True))
     params.smape_path = osp.join(result_dir, generate_filename('.txt', *['smape'], timestamp=True))
 
-    # parameters check
+    # 参数合法性检查
 
     if params.mode == 'together':
-        assert float(0) < params.ratio < float(1)  # check for split ratio
+        assert float(0) < params.ratio < float(1)  # 对数据集拆分比例的检查
     elif params.mode == 'training':
         assert osp.exists(params.trainSet)
     elif params.mode == 'testing':
@@ -119,12 +136,12 @@ def parse_args(script='main'):
     else:
         raise Exception('Unknown implement mode: %s' % params.mode)
 
-    if params.model in MODEL_NAME:
-        assert params.epoch > 0 and isinstance(params.epoch, int)  # check for epoch
-        if params.model[:4] == 'lstm' and params.model[-4:] == 'lstm':      # if model is 'lstm', the time_size id needed parameters
-            assert params.time_size > 0 and isinstance(params.time_size, int)
+    if params.baseNet in MODEL_NAME:
+        assert params.epoch > 0 and isinstance(params.epoch, int)  # 对epoch的检查
+        # if params.model[:4] == 'lstm' and params.model[-4:] == 'lstm':      # if model is 'lstm', the time_size id needed parameters
+        #     assert params.time_size > 0 and isinstance(params.time_size, int)
     else:
-        raise Exception('Unknown model name: %s' % params.model)
+        raise Exception('Unknown model name: %s' % params.baseNet)
 
     return params
 
@@ -135,47 +152,48 @@ def params_show(params):
         print('Parameters Show', file=params.log)
         print('=======================================', file=params.log)
         print('About model:', file=params.log)
-        print('    model: %s' % params.model, file=params.log)
-        print('    epoch: %s' % params.epoch, file=params.log)
-        print('    learning rate: %s' % str(params.lr), file=params.log)
-        if params.model == 'lstm':
-            print('    time size: %d' % params.time_size, file=params.log)
-        if params.mode == 'testing':
-            print('    trained model path: %s' % params.model_state, file=params.log)
+        print('    model: %s' % params.baseNet, file=params.log) 
+        # print('    epoch: %s' % params.epoch, file=params.log)
+        
+        # print('    learning rate: %s' % str(params.lr), file=params.log)
+        # if params.model == 'lstm':
+        #     print('    time size: %d' % params.time_size, file=params.log)
+        # if params.mode == 'testing':
+        #     print('    trained model path: %s' % params.model_state, file=params.log)
         print('About data:', file=params.log)
-        print('    data file: %s' % params.dataSet, file=params.log)
-        print('    training data file: %s' % params.trainSet, file=params.log)
-        print('    testing data file: %s' % params.testSet, file=params.log)
-        print('    data split rate: %s' % params.ratio, file=params.log)
+        print('    data file: %s' % params.dataset, file=params.log)
+        # print('    training data file: %s' % params.trainSet, file=params.log)
+        # print('    testing data file: %s' % params.testSet, file=params.log)
+        # print('    data split rate: %s' % params.ratio, file=params.log)
         print('    predict point num: %d' % params.ppn, file=params.log)
-        print('implement mode: %s' % params.mode, file=params.log)
+        # print('implement mode: %s' % params.mode, file=params.log)
 
-        print('=======================================', file=params.log)
-        print('MAML Show', file=params.log)
-        print('=======================================', file=params.log)
-        if params.user_id != '0':
-            #target_task = task_id_int2str(params.user_id)
-            target_task = params.user_id
-            print('    target task: %s' % target_task, file=params.log)
-        else:
-            begin_task = task_id_int2str(params.begin_task)
-            end_task = task_id_int2str(params.end_task)
-            print('    begin task: %s' % begin_task, file=params.log)
-            print('    end task: %s' % end_task, file=params.log)
-        print('    update step: %d' % params.update_step, file=params.log)
-        print('    update step test: %d' % params.update_step_test, file=params.log)
-        print('    meta lr: %.4f' % params.meta_lr, file=params.log)
-        print('    base lr: %.4f' % params.base_lr, file=params.log)
-        print('    fine lr: %.4f' % params.fine_lr, file=params.log)
-        print('    device: %s' % params.device, file=params.log)
         if params.maml:
-            print('    MAML: True', file=params.log)
-        else:
-            print('    MAML: False', file=params.log)
+            print('=======================================', file=params.log)
+            print('MAML Show', file=params.log)
+            print('=======================================', file=params.log)
+            if params.user_id != '0':
+                #target_task = task_id_int2str(params.user_id)
+                target_task = params.user_id
+                print('    target task: %s' % target_task, file=params.log)
+            else:
+                begin_task = task_id_int2str(params.begin_task)
+                end_task = task_id_int2str(params.end_task)
+                print('    begin task: %s' % begin_task, file=params.log)
+                print('    end task: %s' % end_task, file=params.log)
+            print('    update step: %d' % params.update_step, file=params.log)
+            print('    update step test: %d' % params.update_step_test, file=params.log)
+            print('    meta lr: %.4f' % params.meta_lr, file=params.log)
+            print('    base lr: %.4f' % params.base_lr, file=params.log)
+            print('    fine lr: %.4f' % params.fine_lr, file=params.log)
+            print('    device: %s' % params.device, file=params.log)
         print('=======================================', file=params.log)
     else:
         raise Exception('params is None!', file=params.log)
     pass
+
+
+
 
 
 if __name__ == '__main__':
