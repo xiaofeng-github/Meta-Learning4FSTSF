@@ -27,8 +27,8 @@ torch.set_default_tensor_type(torch.DoubleTensor)
     
 
 
-def train(epoch_num, test_user_index, add_dim_pos, data_path, update_step, 
-            update_step_test, meta_lr, base_lr, fine_lr, device, baseNet, 
+def train(epoch_num, test_user_index, add_dim_pos, data_path, update_step_train, 
+            update_step_target, meta_lr, base_lr, fine_lr, device, baseNet, 
             maml, log, maml_log, lsd, ppn, rmse_path, mape_path, 
             smape_path, ft_step, batch_task_num=5, new_settings=False):
 
@@ -64,8 +64,8 @@ def train(epoch_num, test_user_index, add_dim_pos, data_path, update_step,
 
     metaNet = MetaNet(
         baseNet=BaseNet,
-        update_step=update_step,
-        update_step_test=update_step_test,
+        update_step_train=update_step_train,
+        update_step_target=update_step_target,
         meta_lr=meta_lr,
         base_lr=base_lr,
         fine_lr=fine_lr
@@ -179,7 +179,7 @@ def train(epoch_num, test_user_index, add_dim_pos, data_path, update_step,
                                         torch.from_numpy(train_y).to(device), \
                                         torch.from_numpy(test_x).to(device), \
                                         torch.from_numpy(test_y).to(device)
-            metaNet.update_step_test = ft_step
+            metaNet.update_step_target = ft_step
             metrics = metaNet.fine_tuning(spt_x, spt_y, qry_x, qry_y, naive=True) 
         # ============================================= #
 

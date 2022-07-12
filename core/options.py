@@ -78,8 +78,8 @@ def parse_args(script='main'):
 
     # for maml
     parser.add_argument('--user_id', type=str, default='none', help='the id of true target task')
-    parser.add_argument('--update_step', type=int, default=5, help='the train task update step')
-    parser.add_argument('--update_step_test', type=int, default=50, help='the target task update step')
+    parser.add_argument('--update_step_train', type=int, default=5, help='the train task update step')
+    parser.add_argument('--update_step_target', type=int, default=50, help='the target task update step')
     parser.add_argument('--meta_lr', type=float, default=1e-4, help='the learning rate of meta network')
     parser.add_argument('--base_lr', type=float, default=1e-3, help='the learning rate of base network')
     parser.add_argument('--fine_lr', type=float, default=0.03, help='the learning rate of fine tune target network')
@@ -181,8 +181,8 @@ def params_show(params):
                 end_task = task_id_int2str(params.end_task)
                 print('    begin task: %s' % begin_task, file=params.log)
                 print('    end task: %s' % end_task, file=params.log)
-            print('    update step: %d' % params.update_step, file=params.log)
-            print('    update step test: %d' % params.update_step_test, file=params.log)
+            print('    update step train: %d' % params.update_step, file=params.log)
+            print('    update step target: %d' % params.update_step_test, file=params.log)
             print('    meta lr: %.4f' % params.meta_lr, file=params.log)
             print('    base lr: %.4f' % params.base_lr, file=params.log)
             print('    fine lr: %.4f' % params.fine_lr, file=params.log)

@@ -18,7 +18,7 @@ from configs import TRAINING_TASK_SET, DATA_DIR
 
 if __name__ == '__main__':
 
-    # python train_maml.py --mode together --model cnn+maml --epoch 100  --dataSet maml_load_data(14).pkl --ratio 0.9 --time_size 3 --update_step 10 --update_step_test 20 --meta_lr 0.001 --base_lr 0.01
+    # python train_maml.py --mode together --model cnn+maml --epoch 100  --dataSet maml_load_data(14).pkl --ratio 0.9 --time_size 3 --update_step_train 10 --update_step_target 20 --meta_lr 0.001 --base_lr 0.01
 
     print('--------------------------------------------Time Series Forecasting------------------------------------------')
     params = parse_args('main')
@@ -31,8 +31,8 @@ if __name__ == '__main__':
                 test_user_index=user_id,
                 add_dim_pos=params.add_dim_pos,
                 data_path=osp.join(DATA_DIR, params.dataset),
-                update_step=params.update_step,
-                update_step_test=params.update_step_test,
+                update_step_train=params.update_step_train,
+                update_step_target=params.update_step_target,
                 meta_lr=params.meta_lr,
                 base_lr=params.base_lr,
                 fine_lr=params.fine_lr,
@@ -60,8 +60,8 @@ if __name__ == '__main__':
                     test_user_index=params.user_id,
                     add_dim_pos=params.add_dim_pos,
                     data_path=osp.join(DATA_DIR, params.dataset),
-                    update_step=params.update_step,
-                    update_step_test=params.update_step_test,
+                    update_step_train=params.update_step_train,
+                    update_step_target=params.update_step_target,
                     meta_lr=params.meta_lr,
                     base_lr=params.base_lr,
                     fine_lr=params.fine_lr,

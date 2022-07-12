@@ -22,11 +22,11 @@ torch.set_default_tensor_type(torch.DoubleTensor)
 
 class MetaNet(nn.Module):
 
-    def __init__(self, baseNet=None, update_step=10, update_step_test=20, meta_lr=0.001, base_lr=0.01, fine_lr=0.01):
+    def __init__(self, baseNet=None, update_step_train=10, update_step_target=20, meta_lr=0.001, base_lr=0.01, fine_lr=0.01):
 
         super(MetaNet, self).__init__()
-        self.update_step = update_step
-        self.update_step_test = update_step_test
+        self.update_step_train = update_step_train
+        self.update_step_target = update_step_target
         self.meta_lr = meta_lr
         self.base_lr = base_lr
         self.fine_tune_lr = fine_lr
@@ -92,7 +92,7 @@ class MetaNet(nn.Module):
                 mape_list.append(mape)
                 smape_list.append(smape)
 
-            for step in range(1, self.update_step):
+            for step in range(1, self.update_step_train):
                 y_hat = self.net(x_spt, fast_weights)
                 loss = F.mse_loss(y_hat, y_spt)
                 grad = torch.autograd.grad(loss, fast_weights)
@@ -124,10 +124,6 @@ class MetaNet(nn.Module):
         loss_qry.backward()
         self.meta_optim.step()
 
-        mean_rmse = sum(rmse_list) / len(rmse_list)
-        mean_mape = sum(mape_list) / len(mape_list)
-        mean_loss = sum(loss_list_qry) / len(loss_list_qry)
-        mean_smape = sum(smape_list) / len(smape_list)
         
         return {
             'loss': loss_list_qry[-1].item(), 
@@ -146,19 +142,6 @@ class MetaNet(nn.Module):
         :param qry_y:
         :return:
         '''
-        # ======================================================= #
-        # update time: 2021-04-29
-        # print('=====================================================')
-        # print('train_x:', spt_x.shape)
-        # print('train_y:', spt_y.shape)
-        # print('val_x:', qry_x.shape)
-        # print('val_y:', qry_y.shape)
-        # # print('time size: %d' % self.time)
-        # print('=====================================================')
-        # ======================================================= #
-        # assert len(spt_x.shape) == 4
-
-        query_size = qry_x.size(0)
 
         # 评价指标
         loss_qry_list = []
@@ -198,12 +181,6 @@ class MetaNet(nn.Module):
             rmse_list.append(rmse)
             mape_list.append(mape)
             smape_list.append(smape)
-            # if min_mape > mape:
-            #     rmse_list.append(rmse)
-            #     mape_list.append(mape)
-            #     min_loss = loss_qry.item()
-            #     min_mape = mape
-            #     min_rmse = rmse
             min_rmse = rmse
             min_mape = mape
             min_smape = smape
@@ -216,7 +193,7 @@ class MetaNet(nn.Module):
             print('    Epoch [1] | train_loss: %.4f | test_loss: %.4f | rmse: %.4f | mape: %.4f | smape: %.4f |'
                   % (loss.item(), loss_qry.item(), rmse, mape, smape))
 
-        for step in range(1, self.update_step_test):
+        for step in range(1, self.update_step_target):
             y_hat = self.net(spt_x, fast_weights)
             loss = F.mse_loss(y_hat, spt_y)
             loss_set['train_loss'].append(loss.item())
@@ -239,16 +216,6 @@ class MetaNet(nn.Module):
                 rmse_list.append(rmse)
                 mape_list.append(mape)
                 smape_list.append(smape)
-                # if min_mape > mape:
-                #     rmse_list.append(rmse)
-                #     mape_list.append(mape)
-                #     min_loss = loss_qry.item()
-                #     min_mape = mape
-                #     min_rmse = rmse
-                #     best_epoch = step
-                # if min_mape > mape:
-                #     min_mape = mape
-                #     mape_best_epoch = step + 1
                 if min_rmse > rmse:
                     min_rmse = rmse
                     rmse_best_epoch = step + 1
@@ -260,23 +227,6 @@ class MetaNet(nn.Module):
                     print('    Epoch [%d] | train_loss: %.4f | test_loss: %.4f | rmse: %.4f | smape: %.4f |'
                           % (step + 1, loss.item(), loss_qry.item(), rmse, smape))
                     
-                # if min_rmse > rmse:
-                #     # rmse_list.append(rmse)
-                #     # mape_list.append(mape)
-                #     min_loss = loss_qry.item()
-                #     # min_mape = mape
-                #     min_rmse = rmse
-                #     rmse_best_epoch = step + 1
-                #     print('    Epoch [%d] | train_loss: %.4f | test_loss: %.4f | rmse: %.4f | mape: %.4f | smape: %.4f |'
-                #           % (step + 1, loss.item(), loss_qry.item(), rmse, mape, smape))
-        # 保存网络
-        # --------------------------------
-        # save_model
-        # --------------------------------
-        # del new_net
-        # mean_rmse = sum(rmse_list) / len(rmse_list)
-        # mean_mape = sum(mape_list) / len(mape_list)
-        # mean_loss = sum(loss_qry_list) / len(loss_qry_list)
         return {
             'test_loss': min_loss,
             'train_loss': min_train_loss,
